@@ -1,3 +1,3 @@
-# dbt-tap-gitlab
+# dbt | tap-gitlab
 
-dbt package for tap-gitlab
+This [dbt](https://github.com/fishtown-analytics/dbt) package contains data models for [tap-gitlab](https://gitlab.com/meltano/tap-gitlab).

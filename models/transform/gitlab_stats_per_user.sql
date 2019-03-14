@@ -1,0 +1,158 @@
+WITH users AS (
+
+     SELECT 
+        user_id,
+        user_name
+     FROM {{ref('gitlab_users')}}
+
+),
+
+issues_authored AS (
+
+     SELECT 
+        author_id as user_id, 
+        project_id, 
+        milestone_id, 
+        COUNT(*) as total_issues_authored
+     FROM {{ref('gitlab_issues')}}
+     GROUP BY author_id, project_id, milestone_id
+
+),
+
+issues_assigned AS (
+
+     SELECT 
+        assignee_id as user_id, 
+        project_id, 
+        milestone_id, 
+        COUNT(*) as total_issues_assigned
+     FROM {{ref('gitlab_issues')}}
+     GROUP BY assignee_id, project_id, milestone_id
+
+),
+
+merge_requests_authored AS (
+
+     SELECT 
+        author_id as user_id, 
+        project_id, 
+        milestone_id, 
+        COUNT(*) as total_mrs_authored
+     FROM {{ref('gitlab_merge_requests')}}
+     GROUP BY author_id, project_id, milestone_id
+
+),
+
+merge_requests_assigned AS (
+
+     SELECT 
+        assignee_id as user_id, 
+        project_id, 
+        milestone_id, 
+        COUNT(*) as total_mrs_assigned
+     FROM {{ref('gitlab_merge_requests')}}
+     GROUP BY assignee_id, project_id, milestone_id
+
+),
+
+project AS (
+
+     SELECT project_id, project_name
+     FROM {{ref('gitlab_projects')}}
+
+),
+
+milestone AS (
+
+     SELECT milestone_id, title, start_date, due_date
+     FROM {{ref('gitlab_project_milestones')}}
+
+     UNION 
+
+     SELECT milestone_id, title, start_date, due_date
+     FROM {{ref('gitlab_group_milestones')}}
+
+)
+
+SELECT
+    users.user_id as user_id,
+    users.user_name as user_name,
+    project.project_id as project_id,
+    project.project_name as project_name,
+    milestone.milestone_id as milestone_id,
+    milestone.title as milestone_title,
+    milestone.start_date as milestone_start_date,
+    milestone.due_date as milestone_due_date,
+    i1.total_issues_authored as total_issues_authored,
+    i2.total_issues_assigned as total_issues_assigned,
+    mr1.total_mrs_authored as total_mrs_authored,
+    mr2.total_mrs_assigned as total_mrs_assigned
+FROM users
+  CROSS JOIN project
+  CROSS JOIN milestone
+  LEFT JOIN issues_authored i1  
+    ON i1.user_id = users.user_id
+      AND i1.project_id = project.project_id
+      AND i1.milestone_id = milestone.milestone_id
+  LEFT JOIN issues_assigned i2  
+    ON i2.user_id = users.user_id
+      AND i2.project_id = project.project_id
+      AND i2.milestone_id = milestone.milestone_id
+  LEFT JOIN merge_requests_authored mr1  
+    ON mr1.user_id = users.user_id
+      AND mr1.project_id = project.project_id
+      AND mr1.milestone_id = milestone.milestone_id
+  LEFT JOIN merge_requests_assigned mr2  
+    ON mr2.user_id = users.user_id
+      AND mr2.project_id = project.project_id
+      AND mr2.milestone_id = milestone.milestone_id
+
+WHERE
+    -- Don't keep users with nothing to show
+    (total_issues_authored is not NULL) or
+    (total_issues_assigned is not NULL) or
+    (total_mrs_authored is not NULL) or
+    (total_mrs_assigned is not NULL)
+
+
+UNION 
+
+SELECT
+    users.user_id as user_id,
+    users.user_name as user_name,
+    project.project_id as project_id,
+    project.project_name as project_name,
+    NULL as milestone_id,
+    NULL as milestone_title,
+    NULL as milestone_start_date,
+    NULL as milestone_due_date,
+    i1.total_issues_authored as total_issues_authored,
+    i2.total_issues_assigned as total_issues_assigned,
+    mr1.total_mrs_authored as total_mrs_authored,
+    mr2.total_mrs_assigned as total_mrs_assigned
+FROM users
+  CROSS JOIN project
+
+  LEFT JOIN issues_authored i1  
+    ON i1.user_id = users.user_id
+      AND i1.project_id = project.project_id
+      AND i1.milestone_id is NULL
+  LEFT JOIN issues_assigned i2  
+    ON i2.user_id = users.user_id
+      AND i2.project_id = project.project_id
+      AND i2.milestone_id is NULL
+  LEFT JOIN merge_requests_authored mr1  
+    ON mr1.user_id = users.user_id
+      AND mr1.project_id = project.project_id
+      AND mr1.milestone_id is NULL
+  LEFT JOIN merge_requests_assigned mr2  
+    ON mr2.user_id = users.user_id
+      AND mr2.project_id = project.project_id
+      AND mr2.milestone_id is NULL
+
+WHERE
+    -- Don't keep users with nothing to show
+    (total_issues_authored is not NULL) or
+    (total_issues_assigned is not NULL) or
+    (total_mrs_authored is not NULL) or
+    (total_mrs_assigned is not NULL)
