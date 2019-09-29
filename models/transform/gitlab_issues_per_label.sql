@@ -1,7 +1,7 @@
 WITH labels AS (
 
      SELECT DISTINCT label_id, label_name
-     FROM {{ref('gitlab_project_labels')}}
+     FROM {{ref('gitlab_labels')}}
 
 ),
 

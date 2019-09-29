@@ -120,6 +120,7 @@ SELECT
     total_milestones,
 
     epics.labels as labels,
+    epics.labels_str as labels_str,
     epics.upvotes as upvotes,
     epics.downvotes as downvotes,
     epics.start_date as start_date,

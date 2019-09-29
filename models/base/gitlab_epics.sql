@@ -28,7 +28,12 @@ renamed as (
 
         title as title,
         description as description,
+        
         labels as labels,
+        (
+            SELECT string_agg(trim(label_elements::text, '"'), ', ')
+            FROM jsonb_array_elements(labels) label_elements
+        ) AS labels_str,
 
         upvotes as upvotes,
         downvotes as downvotes,

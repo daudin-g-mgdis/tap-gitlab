@@ -25,7 +25,8 @@ issues_assigned AS (
         assignee_id as user_id, 
         project_id, 
         milestone_id, 
-        COUNT(*) as total_issues_assigned
+        COUNT(*) as total_issues_assigned, 
+        SUM(state_closed_issues) as total_assigned_issues_closed
      FROM {{ref('gitlab_issues')}}
      GROUP BY assignee_id, project_id, milestone_id
 
@@ -37,7 +38,8 @@ merge_requests_authored AS (
         author_id as user_id, 
         project_id, 
         milestone_id, 
-        COUNT(*) as total_mrs_authored
+        COUNT(*) as total_mrs_authored, 
+        SUM(state_merged_mrs) as total_authored_mrs_merged
      FROM {{ref('gitlab_merge_requests')}}
      GROUP BY author_id, project_id, milestone_id
 
@@ -65,12 +67,7 @@ project AS (
 milestone AS (
 
      SELECT milestone_id, title, start_date, due_date
-     FROM {{ref('gitlab_project_milestones')}}
-
-     UNION 
-
-     SELECT milestone_id, title, start_date, due_date
-     FROM {{ref('gitlab_group_milestones')}}
+     FROM {{ref('gitlab_milestones')}}
 
 )
 
@@ -85,7 +82,9 @@ SELECT
     milestone.due_date as milestone_due_date,
     i1.total_issues_authored as total_issues_authored,
     i2.total_issues_assigned as total_issues_assigned,
+    i2.total_assigned_issues_closed as total_assigned_issues_closed,
     mr1.total_mrs_authored as total_mrs_authored,
+    mr1.total_authored_mrs_merged as total_authored_mrs_merged,
     mr2.total_mrs_assigned as total_mrs_assigned
 FROM users
   CROSS JOIN project
@@ -128,7 +127,9 @@ SELECT
     NULL as milestone_due_date,
     i1.total_issues_authored as total_issues_authored,
     i2.total_issues_assigned as total_issues_assigned,
+    i2.total_assigned_issues_closed as total_assigned_issues_closed,
     mr1.total_mrs_authored as total_mrs_authored,
+    mr1.total_authored_mrs_merged as total_authored_mrs_merged,
     mr2.total_mrs_assigned as total_mrs_assigned
 FROM users
   CROSS JOIN project

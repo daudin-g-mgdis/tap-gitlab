@@ -45,6 +45,7 @@ SELECT
     issues.state as issue_state,
     issues.title as issue_title,
     issues.labels as issue_labels,
+    issues.labels_str as issue_labels_str,
     issues.weight as issue_weight,
     issues.confidential as issue_confidential,
     issues.upvotes as issue_upvotes,
