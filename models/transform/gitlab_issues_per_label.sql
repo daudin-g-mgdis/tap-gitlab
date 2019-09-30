@@ -17,8 +17,9 @@ issues AS (
 SELECT
     label_name,
     issues.*
-FROM issues, labels
-WHERE (issues.labels ? labels.label_name)
+FROM issues
+  INNER JOIN labels
+    ON (issues.labels ? labels.label_name)
 
 UNION
 

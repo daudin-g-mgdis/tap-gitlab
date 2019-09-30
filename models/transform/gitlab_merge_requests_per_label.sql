@@ -17,8 +17,9 @@ merge_requests AS (
 SELECT
     label_name,
     merge_requests.*
-FROM merge_requests, labels
-WHERE (merge_requests.labels ? labels.label_name)
+FROM merge_requests
+  INNER JOIN labels
+    ON (merge_requests.labels ? labels.label_name)
 
 UNION
 
