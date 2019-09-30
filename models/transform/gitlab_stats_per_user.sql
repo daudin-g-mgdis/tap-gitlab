@@ -66,7 +66,20 @@ project AS (
 
 milestone AS (
 
-    SELECT milestone_id, title, start_date, due_date
+    SELECT 
+        milestone_id, 
+        title, 
+        
+        start_date,
+        start_date_year,
+        start_date_month,
+        start_date_day,        
+        
+        due_date,
+        due_date_year,
+        due_date_month,
+        due_date_day
+        
     FROM {{ref('gitlab_milestones')}}
 
 )
@@ -79,7 +92,13 @@ SELECT
     milestone.milestone_id as milestone_id,
     milestone.title as milestone_title,
     milestone.start_date as milestone_start_date,
+    milestone.start_date_year as milestone_start_date_year,
+    milestone.start_date_month as milestone_start_date_month,
+    milestone.start_date_day as milestone_start_date_day,
     milestone.due_date as milestone_due_date,
+    milestone.due_date_year as milestone_due_date_year,
+    milestone.due_date_month as milestone_due_date_month,
+    milestone.due_date_day as milestone_due_date_day,
     i1.total_issues_authored as total_issues_authored,
     i2.total_issues_assigned as total_issues_assigned,
     i2.total_assigned_issues_closed as total_assigned_issues_closed,

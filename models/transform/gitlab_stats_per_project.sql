@@ -43,8 +43,20 @@ merge_request_stats AS (
 
 milestones AS (
 
-  SELECT milestone_id, title, start_date, due_date
-  
+  SELECT 
+    milestone_id, 
+    title, 
+    
+    start_date,
+    start_date_year,
+    start_date_month,
+    start_date_day,        
+    
+    due_date,
+    due_date_year,
+    due_date_month,
+    due_date_day
+
   FROM {{ref('gitlab_milestones')}}
 
 )
@@ -58,7 +70,13 @@ SELECT
     milestones.milestone_id as milestone_id,
     milestones.title as milestone_title,
     milestones.start_date as milestone_start_date,
+    milestones.start_date_year as milestone_start_date_year,
+    milestones.start_date_month as milestone_start_date_month,
+    milestones.start_date_day as milestone_start_date_day,
     milestones.due_date as milestone_due_date,
+    milestones.due_date_year as milestone_due_date_year,
+    milestones.due_date_month as milestone_due_date_month,
+    milestones.due_date_day as milestone_due_date_day,
 
     issue_stats.total_issues as total_issues,
     issue_stats.total_open_issues as total_open_issues,
