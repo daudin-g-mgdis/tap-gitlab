@@ -1,7 +1,7 @@
 WITH labels AS (
 
      SELECT DISTINCT label_id, label_name
-     FROM {{ref('gitlab_project_labels')}}
+     FROM {{ref('gitlab_labels')}}
 
 ),
 
@@ -17,8 +17,9 @@ issues AS (
 SELECT
     label_name,
     issues.*
-FROM issues, labels
-WHERE (issues.labels ? labels.label_name)
+FROM issues
+  INNER JOIN labels
+    ON (issues.labels ? labels.label_name)
 
 UNION
 

@@ -9,68 +9,78 @@ WITH users AS (
 
 issues_authored AS (
 
-     SELECT 
+    SELECT 
         author_id as user_id, 
         project_id, 
         milestone_id, 
         COUNT(*) as total_issues_authored
-     FROM {{ref('gitlab_issues')}}
-     GROUP BY author_id, project_id, milestone_id
+    FROM {{ref('gitlab_issues')}}
+    GROUP BY author_id, project_id, milestone_id
 
 ),
 
 issues_assigned AS (
 
-     SELECT 
+    SELECT 
         assignee_id as user_id, 
         project_id, 
         milestone_id, 
-        COUNT(*) as total_issues_assigned
-     FROM {{ref('gitlab_issues')}}
-     GROUP BY assignee_id, project_id, milestone_id
+        COUNT(*) as total_issues_assigned, 
+        SUM(state_closed_issues) as total_assigned_issues_closed
+    FROM {{ref('gitlab_issues')}}
+    GROUP BY assignee_id, project_id, milestone_id
 
 ),
 
 merge_requests_authored AS (
 
-     SELECT 
+    SELECT 
         author_id as user_id, 
         project_id, 
         milestone_id, 
-        COUNT(*) as total_mrs_authored
-     FROM {{ref('gitlab_merge_requests')}}
-     GROUP BY author_id, project_id, milestone_id
+        COUNT(*) as total_mrs_authored, 
+        SUM(state_merged_mrs) as total_authored_mrs_merged
+    FROM {{ref('gitlab_merge_requests')}}
+    GROUP BY author_id, project_id, milestone_id
 
 ),
 
 merge_requests_assigned AS (
 
-     SELECT 
+    SELECT 
         assignee_id as user_id, 
         project_id, 
         milestone_id, 
         COUNT(*) as total_mrs_assigned
-     FROM {{ref('gitlab_merge_requests')}}
-     GROUP BY assignee_id, project_id, milestone_id
+    FROM {{ref('gitlab_merge_requests')}}
+    GROUP BY assignee_id, project_id, milestone_id
 
 ),
 
 project AS (
 
-     SELECT project_id, project_name
-     FROM {{ref('gitlab_projects')}}
+    SELECT project_id, project_name
+    FROM {{ref('gitlab_projects')}}
 
 ),
 
 milestone AS (
 
-     SELECT milestone_id, title, start_date, due_date
-     FROM {{ref('gitlab_project_milestones')}}
-
-     UNION 
-
-     SELECT milestone_id, title, start_date, due_date
-     FROM {{ref('gitlab_group_milestones')}}
+    SELECT 
+        milestone_id, 
+        title, 
+        
+        start_date,
+        start_date_year,
+        start_date_month,
+        start_date_day,        
+        
+        due_date,
+        due_date_year,
+        due_date_month,
+        due_date_day
+        
+    FROM {{ref('gitlab_milestones')}}
 
 )
 
@@ -82,77 +92,63 @@ SELECT
     milestone.milestone_id as milestone_id,
     milestone.title as milestone_title,
     milestone.start_date as milestone_start_date,
+    milestone.start_date_year as milestone_start_date_year,
+    milestone.start_date_month as milestone_start_date_month,
+    milestone.start_date_day as milestone_start_date_day,
     milestone.due_date as milestone_due_date,
+    milestone.due_date_year as milestone_due_date_year,
+    milestone.due_date_month as milestone_due_date_month,
+    milestone.due_date_day as milestone_due_date_day,
     i1.total_issues_authored as total_issues_authored,
     i2.total_issues_assigned as total_issues_assigned,
+    i2.total_assigned_issues_closed as total_assigned_issues_closed,
     mr1.total_mrs_authored as total_mrs_authored,
+    mr1.total_authored_mrs_merged as total_authored_mrs_merged,
     mr2.total_mrs_assigned as total_mrs_assigned
-FROM users
-  CROSS JOIN project
-  CROSS JOIN milestone
-  LEFT JOIN issues_authored i1  
-    ON i1.user_id = users.user_id
-      AND i1.project_id = project.project_id
-      AND i1.milestone_id = milestone.milestone_id
-  LEFT JOIN issues_assigned i2  
-    ON i2.user_id = users.user_id
-      AND i2.project_id = project.project_id
-      AND i2.milestone_id = milestone.milestone_id
-  LEFT JOIN merge_requests_authored mr1  
-    ON mr1.user_id = users.user_id
-      AND mr1.project_id = project.project_id
-      AND mr1.milestone_id = milestone.milestone_id
-  LEFT JOIN merge_requests_assigned mr2  
-    ON mr2.user_id = users.user_id
-      AND mr2.project_id = project.project_id
-      AND mr2.milestone_id = milestone.milestone_id
+
+FROM issues_authored i1  
+
+  FULL OUTER JOIN issues_assigned i2  
+    ON i2.user_id = i1.user_id
+      AND i2.project_id = i1.project_id
+      AND (
+        i2.milestone_id = i1.milestone_id
+        OR COALESCE(i1.milestone_id, i2.milestone_id) is NULL
+      )
+
+      
+  FULL OUTER JOIN merge_requests_authored mr1  
+    ON mr1.user_id = COALESCE(i1.user_id, i2.user_id) 
+      AND mr1.project_id = COALESCE(i1.project_id, i2.project_id)
+      AND (
+        mr1.milestone_id = COALESCE(i1.milestone_id, i2.milestone_id)
+        OR COALESCE(i1.milestone_id, i2.milestone_id, mr1.milestone_id) is NULL
+      )
+      
+  FULL OUTER JOIN merge_requests_assigned mr2  
+    ON mr2.user_id = COALESCE(i1.user_id, i2.user_id, mr1.user_id) 
+      AND mr2.project_id = COALESCE(i1.project_id, i2.project_id, mr1.project_id)
+      AND (
+        mr2.milestone_id = COALESCE(i1.milestone_id, i2.milestone_id, mr1.milestone_id) 
+        OR COALESCE(i1.milestone_id, i2.milestone_id, mr1.milestone_id, mr2.milestone_id) is NULL
+      )
+      
+  LEFT JOIN users  
+    ON users.user_id = COALESCE(i1.user_id, i2.user_id, mr1.user_id, mr2.user_id) 
+    
+  LEFT JOIN project  
+    ON project.project_id = COALESCE(i1.project_id, i2.project_id, mr1.project_id, mr2.project_id) 
+    
+  LEFT JOIN milestone  
+    ON milestone.milestone_id = COALESCE(i1.milestone_id, i2.milestone_id, mr1.milestone_id, mr2.milestone_id) 
 
 WHERE
-    -- Don't keep users with nothing to show
-    (total_issues_authored is not NULL) or
-    (total_issues_assigned is not NULL) or
-    (total_mrs_authored is not NULL) or
-    (total_mrs_assigned is not NULL)
-
-
-UNION 
-
-SELECT
-    users.user_id as user_id,
-    users.user_name as user_name,
-    project.project_id as project_id,
-    project.project_name as project_name,
-    NULL as milestone_id,
-    NULL as milestone_title,
-    NULL as milestone_start_date,
-    NULL as milestone_due_date,
-    i1.total_issues_authored as total_issues_authored,
-    i2.total_issues_assigned as total_issues_assigned,
-    mr1.total_mrs_authored as total_mrs_authored,
-    mr2.total_mrs_assigned as total_mrs_assigned
-FROM users
-  CROSS JOIN project
-
-  LEFT JOIN issues_authored i1  
-    ON i1.user_id = users.user_id
-      AND i1.project_id = project.project_id
-      AND i1.milestone_id is NULL
-  LEFT JOIN issues_assigned i2  
-    ON i2.user_id = users.user_id
-      AND i2.project_id = project.project_id
-      AND i2.milestone_id is NULL
-  LEFT JOIN merge_requests_authored mr1  
-    ON mr1.user_id = users.user_id
-      AND mr1.project_id = project.project_id
-      AND mr1.milestone_id is NULL
-  LEFT JOIN merge_requests_assigned mr2  
-    ON mr2.user_id = users.user_id
-      AND mr2.project_id = project.project_id
-      AND mr2.milestone_id is NULL
-
-WHERE
-    -- Don't keep users with nothing to show
-    (total_issues_authored is not NULL) or
-    (total_issues_assigned is not NULL) or
-    (total_mrs_authored is not NULL) or
-    (total_mrs_assigned is not NULL)
+    users.user_id is not NULL 
+    AND project.project_id is not NULL
+    AND (
+      -- Don't keep users with nothing to show
+      (total_issues_authored is not NULL) or
+      (total_issues_assigned is not NULL) or
+      (total_mrs_authored is not NULL) or
+      (total_mrs_assigned is not NULL)
+    )

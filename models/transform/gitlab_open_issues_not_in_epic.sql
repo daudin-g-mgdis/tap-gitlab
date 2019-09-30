@@ -45,6 +45,7 @@ SELECT
     issues.state as issue_state,
     issues.title as issue_title,
     issues.labels as issue_labels,
+    issues.labels_str as issue_labels_str,
     issues.weight as issue_weight,
     issues.confidential as issue_confidential,
     issues.upvotes as issue_upvotes,
@@ -59,7 +60,13 @@ SELECT
     milestones.title as milestone_title,
     milestones.state as milestone_state,
     milestones.start_date as milestone_start_date,
-    milestones.due_date as milestone_due_date
+    milestones.start_date_year as milestone_start_date_year,
+    milestones.start_date_month as milestone_start_date_month,
+    milestones.start_date_day as milestone_start_date_day,
+    milestones.due_date as milestone_due_date,
+    milestones.due_date_year as milestone_due_date_year,
+    milestones.due_date_month as milestone_due_date_month,
+    milestones.due_date_day as milestone_due_date_day
 
 FROM issues
   LEFT JOIN milestones  
