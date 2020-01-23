@@ -52,7 +52,7 @@ renamed as (
         user_notes_count as user_notes_count,
         merge_requests_count as merge_requests_count,
 
-        due_date as due_date,
+        due_date::date as due_date,
 
         time_estimate as time_estimate,
         total_time_spent as total_time_spent,
