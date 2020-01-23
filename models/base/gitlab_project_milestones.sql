@@ -18,8 +18,8 @@ renamed as (
 
         state as state,
 
-        start_date as start_date,
-        due_date as due_date,
+        start_date::date as start_date,
+        due_date::date as due_date,
         created_at as created_at,
         updated_at as updated_at
 

@@ -38,9 +38,9 @@ renamed as (
         upvotes as upvotes,
         downvotes as downvotes,
 
-        start_date as start_date,
-        end_date as end_date,
-        due_date as due_date,
+        start_date::date as start_date,
+        end_date::date as end_date,
+        due_date::date as due_date,
 
         created_at as created_at,
         updated_at as updated_at
