@@ -1,20 +1,21 @@
 WITH labels AS (
 
-	SELECT DISTINCT label_id, label_name
-	FROM {{ref('gitlab_labels')}}
+  SELECT DISTINCT label_id, label_name
+  FROM {{ref('gitlab_labels')}}
 
 ),
 
 issue_stats AS (
 
-	SELECT
-		label_name, 
-		project_id,
-		milestone_id,
-		count(distinct issue_id) as total_issues, 
-		SUM(state_open_issues) as total_open_issues, 
-		SUM(state_closed_issues) as total_closed_issues, 
-		SUM(user_notes_count) as total_issue_comments
+  SELECT
+    label_name,
+    project_id,
+    milestone_id,
+    count(distinct issue_id) as total_issues,
+    SUM(state_open_issues) as total_open_issues,
+    SUM(state_closed_issues) as total_closed_issues,
+    SUM(user_notes_count) as total_issue_comments,
+    SUM(weight) as total_issue_weight
 
 	FROM {{ref('gitlab_issues_per_label')}}
 
@@ -23,39 +24,39 @@ issue_stats AS (
 
 merge_request_stats AS (
 
-	SELECT
-		label_name, 
-		project_id,
-		milestone_id,
-		count(distinct merge_request_id) as total_mrs, 
-		SUM(state_open_mrs) as total_open_mrs, 
-		SUM(state_closed_mrs) as total_closed_mrs, 
-		SUM(state_merged_mrs) as total_merged_mrs, 
-		SUM(user_notes_count) as total_mr_comments
+  SELECT
+    label_name,
+    project_id,
+    milestone_id,
+    count(distinct merge_request_id) as total_mrs,
+    SUM(state_open_mrs) as total_open_mrs,
+    SUM(state_closed_mrs) as total_closed_mrs,
+    SUM(state_merged_mrs) as total_merged_mrs,
+    SUM(user_notes_count) as total_mr_comments
 
-	FROM {{ref('gitlab_merge_requests_per_label')}}
+  FROM {{ref('gitlab_merge_requests_per_label')}}
 
-	GROUP BY label_name, project_id, milestone_id
+  GROUP BY label_name, project_id, milestone_id
 ),
 
 project AS (
 
-	SELECT project_id, project_name
-	
-	FROM {{ref('gitlab_projects')}}
+  SELECT project_id, project_name
+
+  FROM {{ref('gitlab_projects')}}
 
 ),
 
 milestone AS (
 
-  SELECT 
-    milestone_id, 
-    title, 
+  SELECT
+    milestone_id,
+    title,
 
     start_date,
     start_date_year,
     start_date_month,
-    start_date_day,        
+    start_date_day,
 
     due_date,
     due_date_year,
@@ -88,6 +89,7 @@ SELECT
     issue_stats.total_open_issues as total_open_issues,
     issue_stats.total_closed_issues as total_closed_issues,
     issue_stats.total_issue_comments as total_issue_comments,
+    issue_stats.total_issue_weight as total_issue_weight,
 
     merge_request_stats.total_mrs as total_mrs,
     merge_request_stats.total_open_mrs as total_open_mrs,
@@ -96,13 +98,13 @@ SELECT
     merge_request_stats.total_mr_comments as total_mr_comments
 
 FROM labels
-  LEFT JOIN issue_stats   
+  LEFT JOIN issue_stats
     ON labels.label_name = issue_stats.label_name
 
-  LEFT JOIN project   
+  LEFT JOIN project
     ON issue_stats.project_id = project.project_id
 
-  LEFT JOIN merge_request_stats   
+  LEFT JOIN merge_request_stats
     ON issue_stats.label_name = merge_request_stats.label_name
       AND issue_stats.project_id = merge_request_stats.project_id
       AND (
@@ -113,6 +115,5 @@ FROM labels
       	)
       )
 
-  LEFT JOIN milestone   
+  LEFT JOIN milestone
     ON issue_stats.milestone_id = milestone.milestone_id
-  
