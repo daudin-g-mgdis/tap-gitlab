@@ -1,7 +1,7 @@
 WITH projects AS (
 
-  SELECT 
-    project_id, 
+  SELECT
+    project_id,
     project_name,
     forks_count as total_forks,
     star_count as total_stars
@@ -12,46 +12,47 @@ WITH projects AS (
 
 issue_stats AS (
 
-	SELECT
-		project_id,
-		milestone_id,
-		count(distinct issue_id) as total_issues, 
-		SUM(state_open_issues) as total_open_issues, 
-		SUM(state_closed_issues) as total_closed_issues, 
-		SUM(user_notes_count) as total_issue_comments
+  SELECT
+    project_id,
+    milestone_id,
+    count(distinct issue_id) as total_issues,
+    SUM(state_open_issues) as total_open_issues,
+    SUM(state_closed_issues) as total_closed_issues,
+    SUM(user_notes_count) as total_issue_comments,
+    SUM(weight) as total_issue_weight
 
-	FROM {{ref('gitlab_issues')}}
+  FROM {{ref('gitlab_issues')}}
 
-	GROUP BY project_id, milestone_id
+  GROUP BY project_id, milestone_id
 ),
 
 merge_request_stats AS (
 
-	SELECT
-		project_id,
-		milestone_id,
-		count(distinct merge_request_id) as total_mrs, 
-		SUM(state_open_mrs) as total_open_mrs, 
-		SUM(state_closed_mrs) as total_closed_mrs, 
-		SUM(state_merged_mrs) as total_merged_mrs, 
-		SUM(user_notes_count) as total_mr_comments
+  SELECT
+    project_id,
+    milestone_id,
+    count(distinct merge_request_id) as total_mrs,
+    SUM(state_open_mrs) as total_open_mrs,
+    SUM(state_closed_mrs) as total_closed_mrs,
+    SUM(state_merged_mrs) as total_merged_mrs,
+    SUM(user_notes_count) as total_mr_comments
 
-	FROM {{ref('gitlab_merge_requests')}}
+  FROM {{ref('gitlab_merge_requests')}}
 
-	GROUP BY project_id, milestone_id
+  GROUP BY project_id, milestone_id
 ),
 
 milestones AS (
 
-  SELECT 
-    milestone_id, 
-    title, 
-    
+  SELECT
+    milestone_id,
+    title,
+
     start_date,
     start_date_year,
     start_date_month,
-    start_date_day,        
-    
+    start_date_day,
+
     due_date,
     due_date_year,
     due_date_month,
@@ -82,6 +83,7 @@ SELECT
     issue_stats.total_open_issues as total_open_issues,
     issue_stats.total_closed_issues as total_closed_issues,
     issue_stats.total_issue_comments as total_issue_comments,
+    issue_stats.total_issue_weight as total_issue_weight,
 
     merge_request_stats.total_mrs as total_mrs,
     merge_request_stats.total_open_mrs as total_open_mrs,
@@ -90,10 +92,10 @@ SELECT
     merge_request_stats.total_mr_comments as total_mr_comments
 
 FROM projects
-  LEFT JOIN issue_stats   
+  LEFT JOIN issue_stats
     ON issue_stats.project_id = projects.project_id
 
-  LEFT JOIN merge_request_stats   
+  LEFT JOIN merge_request_stats
     ON merge_request_stats.project_id = projects.project_id
       AND (
       	issue_stats.milestone_id = merge_request_stats.milestone_id
@@ -103,6 +105,5 @@ FROM projects
       	)
       )
 
-  LEFT JOIN milestones   
+  LEFT JOIN milestones
     ON issue_stats.milestone_id = milestones.milestone_id
-  
