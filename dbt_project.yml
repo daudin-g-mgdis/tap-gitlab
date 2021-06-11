@@ -1,5 +1,10 @@
 name: 'tap_gitlab'
 version: '0.0.3'
+config-version: 2
+vars:
+  tap_gitlab:
+    schema:                  # the schema where the raw gitlab tables are located
+    ultimate_license:        # whether tables (e.g. epics) only available on Ultimate Accounts are available
 
 source-paths: ["models"]     # paths with source code to compile
 analysis-paths: ["analysis"] # path with analysis files which are compiled, but not run
@@ -14,7 +19,3 @@ models:
       materialized: table
     transform:
       materialized: table
-
-    vars:
-      schema:                     # the schema where the raw gitlab tables are located
-      ultimate_license:           # whether tables (e.g. epics) only available on Ultimate Accounts are available
