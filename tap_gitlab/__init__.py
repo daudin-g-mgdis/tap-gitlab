@@ -6,6 +6,7 @@ import os
 import re
 import requests
 import singer
+import json
 from singer import Transformer, utils, metadata
 from singer.catalog import Catalog, CatalogEntry
 from singer.schema import Schema
@@ -27,6 +28,7 @@ CONFIG = {
     'fetch_retried_jobs': False,
     'fetch_group_variables': False,
     'fetch_project_variables': False,
+    'projects_files': {}
 }
 STATE = {}
 CATALOG = None
@@ -205,7 +207,13 @@ RESOURCES = {
         'schema': load_schema('group_variables'),
         'key_properties': ['group_id', 'key'],
         'replication_method': 'FULL_TABLE',
-    }
+    },
+    'file': {
+        'url': '/projects/{id}/repository/files/{filename}/raw?ref={commit_id}',
+        'schema': load_schema('file'),
+        'key_properties': ['project_id', 'commit_id'],
+        'replication_method': 'FULL_TABLE',
+    },
 }
 
 ULTIMATE_RESOURCES = ("epics", "epic_issues")
@@ -230,7 +238,7 @@ class ResourceInaccessible(Exception):
 def truthy(val) -> bool:
     return str(val).lower() in TRUTHY
 
-def get_url(entity, id, secondary_id=None, start_date=None, fetch_retried_jobs=False):
+def get_url(entity, id, secondary_id=None, start_date=None, fetch_retried_jobs=False, commit_id=None, filename=None):
     if not isinstance(id, int):
         id = id.replace("/", "%2F")
 
@@ -242,6 +250,8 @@ def get_url(entity, id, secondary_id=None, start_date=None, fetch_retried_jobs=F
             secondary_id=secondary_id,
             start_date=start_date,
             fetch_retried_jobs=fetch_retried_jobs,
+            commit_id=commit_id,
+            filename=filename
         )
 
 
@@ -526,6 +536,13 @@ def sync_tags(project):
             transformed_row = transformer.transform(row, RESOURCES["tags"]["schema"], mdata)
 
             singer.write_record("tags", transformed_row, time_extracted=utils.now())
+
+             # Charger les fichiers définis dans la config YAML
+            project_id_str = str(project["id"])
+            file_list = CONFIG.get("projects_files", {}).get(project_id_str, [])
+
+            for file_path in file_list:
+                sync_file(project, transformed_row, file_path)
 
 
 def sync_milestones(entity, element="project"):
@@ -853,6 +870,43 @@ def sync_project(pid):
         utils.update_state(STATE, state_key, last_activity_at)
         singer.write_state(STATE)
 
+def sync_file(project, tag, filename):
+    entity = "file"
+    url = get_url(entity="file", id=project['id'], commit_id=tag['commit_id'], filename=filename)
+
+    try:
+        # Récupère le contenu du fichier package.json depuis GitLab
+        file_content = request(url).text
+    except ResourceInaccessible as exc:
+        # Don't halt execution if a Project is Inaccessible
+        # Just skip it and continue with the rest of the extraction
+        return
+
+    # Le temps d'extraction pour l'enregistrement des données
+    time_extracted = utils.now()
+    stream = CATALOG.get_stream(entity)
+    mdata = metadata.to_map(stream.metadata)
+
+    # Créer le dictionnaire avec les informations à stocker
+    row = {
+        "project_id": project["id"],
+        "commit_id": tag['commit_id'],
+        "filename": filename,
+        "filepath": url,
+        "content": file_content 
+    }
+
+    if not stream.is_selected():
+        return
+
+    # Transformer les données avec les métadonnées et effectuer l'écriture
+    with Transformer(pre_hook=format_timestamp) as transformer:
+        transformed_row = transformer.transform(row, RESOURCES[entity]["schema"], mdata)
+        singer.write_record(entity, transformed_row, time_extracted=time_extracted)
+
+    # Log l'état après l'extraction
+    LOGGER.info(f"Extraction de package.json pour le projet {project['id']} réussie.")
+
 def do_discover(select_all=False):
     streams = []
     api_url_regex = re.compile(r'^gitlab.com')
@@ -938,6 +992,10 @@ def main_impl():
     CONFIG['fetch_retried_jobs'] = truthy(CONFIG['fetch_retried_jobs'])
     CONFIG['fetch_group_variables'] = truthy(CONFIG['fetch_group_variables'])
     CONFIG['fetch_project_variables'] = truthy(CONFIG['fetch_project_variables'])
+    try:
+        CONFIG['projects_files'] = json.loads(CONFIG['projects_files'])
+    except json.JSONDecodeError:
+        CONFIG['projects_files'] = {}
 
     if '/api/' not in CONFIG['api_url']:
         CONFIG['api_url'] += '/api/v4'

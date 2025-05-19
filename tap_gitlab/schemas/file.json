@@ -1,0 +1,20 @@
+{
+    "type": "object",
+    "properties": {
+        "project_id": {
+            "type": ["integer"]
+        },
+        "commit_id": {
+            "type": ["string"]
+        },
+        "filename": {
+            "type": ["string"]
+        },
+        "filepath": {
+            "type": ["string"]
+        },
+        "content": {
+            "type": ["string"]
+        }
+    }
+}
