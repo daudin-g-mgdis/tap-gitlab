@@ -1,6 +1,7 @@
 name: 'tap_gitlab'
 version: '0.0.3'
 config-version: 2
+profile: default
 require-dbt-version: [">=1.0.0", "<2.0.0"]
 vars:
   tap_gitlab:
