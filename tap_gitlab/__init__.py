@@ -528,22 +528,36 @@ def sync_tags(project):
         return
     mdata = metadata.to_map(stream.metadata)
 
+    # Keep a state for the tags fetched per project
+    state_key = "project_{}_tags".format(project["id"])
+    start_date = parse_datetime(get_start(state_key))
+
     url = get_url(entity="tags", id=project['id'])
     with Transformer(pre_hook=format_timestamp) as transformer:
         for row in gen_request(url):
+            commit_date_str = row["commit"]["committed_date"]
+            commit_date = parse_datetime(commit_date_str)
+
+            # Vérifie si le commit est après la start_date
+            if commit_date <= start_date:
+                continue
+
             flatten_id(row, "commit")
             row['project_id'] = project["id"]
             transformed_row = transformer.transform(row, RESOURCES["tags"]["schema"], mdata)
 
             singer.write_record("tags", transformed_row, time_extracted=utils.now())
 
-             # Charger les fichiers définis dans la config YAML
+            # Charger les fichiers définis dans la config YAML
             project_id_str = str(project["id"])
             file_list = CONFIG.get("projects_files", {}).get(project_id_str, [])
 
             for file_path in file_list:
                 sync_file(project, transformed_row, file_path)
-
+            
+            utils.update_state(STATE, state_key, commit_date_str)
+    
+    singer.write_state(STATE)
 
 def sync_milestones(entity, element="project"):
     stream_name = "{}_milestones".format(element)
