@@ -554,13 +554,12 @@ def sync_tags(project):
 
             # Search for file at root
             for f in files:
-                    sync_file(project, transformed_row, f)
+                    sync_file(project, transformed_row, f, "")
 
             # Search for files in nested path
             for p in paths:
                 for f in files:
-                    file_path = f'{p}%2F{f}'
-                    sync_file(project, transformed_row, file_path)
+                    sync_file(project, transformed_row, f, p)
 
     
     singer.write_state(STATE)
@@ -890,9 +889,10 @@ def sync_project(pid):
         utils.update_state(STATE, state_key, last_activity_at)
         singer.write_state(STATE)
 
-def sync_file(project, tag, filename):
+def sync_file(project, tag, filename, filepath):
     entity = "file"
-    url = get_url(entity="file", id=project['id'], commit_id=tag['commit_id'], filename=filename)
+    concatened_path = f'{filepath}%2F{filename}' if filepath != "" else filename
+    url = get_url(entity="file", id=project['id'], commit_id=tag['commit_id'], filename=concatened_path)
 
     try:
         # Récupère le contenu du fichier package.json depuis GitLab
@@ -912,7 +912,8 @@ def sync_file(project, tag, filename):
         "project_id": project["id"],
         "commit_id": tag['commit_id'],
         "filename": filename,
-        "filepath": url,
+        "filepath": filepath,
+        "fileurl": url,
         "content": file_content 
     }
 

@@ -13,6 +13,9 @@
         "filepath": {
             "type": ["string"]
         },
+        "fileurl": {
+            "type": ["string"]
+        },
         "content": {
             "type": ["string"]
         }
