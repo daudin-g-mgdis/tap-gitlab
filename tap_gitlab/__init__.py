@@ -532,6 +532,10 @@ def sync_tags(project):
     state_key = "project_{}_tags".format(project["id"])
     start_date = parse_datetime(get_start(state_key))
 
+    # Where to download files
+    files = CONFIG.get("files_names", "").split(' ')
+    paths = CONFIG.get("files_paths", "").split(' ')
+
     url = get_url(entity="tags", id=project['id'])
     with Transformer(pre_hook=format_timestamp) as transformer:
         for row in gen_request(url):
@@ -548,14 +552,16 @@ def sync_tags(project):
 
             singer.write_record("tags", transformed_row, time_extracted=utils.now())
 
-            # Charger les fichiers définis dans la config YAML
-            project_id_str = str(project["id"])
-            file_list = CONFIG.get("projects_files", {}).get(project_id_str, [])
+            # Search for file at root
+            for f in files:
+                    sync_file(project, transformed_row, f)
 
-            for file_path in file_list:
-                sync_file(project, transformed_row, file_path)
-            
-            utils.update_state(STATE, state_key, commit_date_str)
+            # Search for files in nested path
+            for p in paths:
+                for f in files:
+                    file_path = f'{p}%2F{f}'
+                    sync_file(project, transformed_row, file_path)
+
     
     singer.write_state(STATE)
 
@@ -1006,10 +1012,6 @@ def main_impl():
     CONFIG['fetch_retried_jobs'] = truthy(CONFIG['fetch_retried_jobs'])
     CONFIG['fetch_group_variables'] = truthy(CONFIG['fetch_group_variables'])
     CONFIG['fetch_project_variables'] = truthy(CONFIG['fetch_project_variables'])
-    try:
-        CONFIG['projects_files'] = json.loads(CONFIG['projects_files'])
-    except json.JSONDecodeError:
-        CONFIG['projects_files'] = {}
 
     if '/api/' not in CONFIG['api_url']:
         CONFIG['api_url'] += '/api/v4'
