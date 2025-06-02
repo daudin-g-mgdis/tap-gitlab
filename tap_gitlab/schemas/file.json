@@ -18,6 +18,9 @@
         },
         "content": {
             "type": ["string"]
+        },
+        "ref": {
+            "type": ["null", "string"]
         }
     }
 }

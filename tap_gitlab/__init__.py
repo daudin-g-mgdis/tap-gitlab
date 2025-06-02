@@ -351,6 +351,10 @@ def sync_branches(project):
         return
     mdata = metadata.to_map(stream.metadata)
 
+    # Récupération des fichiers et chemins
+    files = CONFIG.get("files_names", "").split(' ')
+    paths = CONFIG.get("files_paths", "").split(' ')
+
     url = get_url(entity="branches", id=project['id'])
     with Transformer(pre_hook=format_timestamp) as transformer:
         for row in gen_request(url):
@@ -358,6 +362,15 @@ def sync_branches(project):
             flatten_id(row, "commit")
             transformed_row = transformer.transform(row, RESOURCES["branches"]["schema"], mdata)
             singer.write_record("branches", transformed_row, time_extracted=utils.now())
+
+            # Recherche de fichiers à la racine
+            for f in files:
+                sync_file(project, transformed_row, f, "", transformed_row["name"])
+
+            # Recherche de fichiers dans les chemins imbriqués
+            for p in paths:
+                for f in files:
+                    sync_file(project, transformed_row, f, p, transformed_row["name"])
 
 def sync_commits(project):
     entity = "commits"
@@ -554,12 +567,12 @@ def sync_tags(project):
 
             # Search for file at root
             for f in files:
-                    sync_file(project, transformed_row, f, "")
+                    sync_file(project, transformed_row, f, "", "")
 
             # Search for files in nested path
             for p in paths:
                 for f in files:
-                    sync_file(project, transformed_row, f, p)
+                    sync_file(project, transformed_row, f, p, "")
 
     
     singer.write_state(STATE)
@@ -889,7 +902,7 @@ def sync_project(pid):
         utils.update_state(STATE, state_key, last_activity_at)
         singer.write_state(STATE)
 
-def sync_file(project, tag, filename, filepath):
+def sync_file(project, tag, filename, filepath, ref):
     entity = "file"
     concatened_path = f'{filepath}%2F{filename}' if filepath != "" else filename
     url = get_url(entity="file", id=project['id'], commit_id=tag['commit_id'], filename=concatened_path)
@@ -914,7 +927,8 @@ def sync_file(project, tag, filename, filepath):
         "filename": filename,
         "filepath": filepath,
         "fileurl": url,
-        "content": file_content 
+        "content": file_content ,
+        "ref": ref
     }
 
     if not stream.is_selected():
@@ -926,7 +940,7 @@ def sync_file(project, tag, filename, filepath):
         singer.write_record(entity, transformed_row, time_extracted=time_extracted)
 
     # Log l'état après l'extraction
-    LOGGER.info(f"Extraction de package.json pour le projet {project['id']} réussie.")
+    LOGGER.info(f"Extraction de {filename} pour le projet {project['id']} réussie.")
 
 def do_discover(select_all=False):
     streams = []
