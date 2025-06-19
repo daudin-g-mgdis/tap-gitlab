@@ -211,7 +211,7 @@ RESOURCES = {
     'file': {
         'url': '/projects/{id}/repository/files/{filename}/raw?ref={commit_id}',
         'schema': load_schema('file'),
-        'key_properties': ['project_id', 'commit_id'],
+        'key_properties': ['project_id', 'commit_id', 'filename', 'filepath'],
         'replication_method': 'FULL_TABLE',
     },
 }
