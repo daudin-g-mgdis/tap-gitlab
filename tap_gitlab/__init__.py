@@ -925,7 +925,7 @@ def sync_file(project, tag, filename, filepath, ref):
     # Récupère le commit associé pour avoir la date
     commit_url = get_url(entity="commit_details", id=project['id'], commit_id=tag['commit_id'])
     try:
-        commit_content = request(url).json()
+        commit_content = request(commit_url).json()
     except ResourceInaccessible as exc:
         # Don't halt execution if a commit is Inaccessible
         # Just skip it and continue with the rest of the extraction
