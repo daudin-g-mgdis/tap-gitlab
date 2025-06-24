@@ -63,6 +63,17 @@
                 }
             ]
         },
+        "queued_duration": {
+            "anyOf": [
+                {
+                    "type": "number",
+                    "format": "float"
+                },
+                {
+                    "type": "null"
+                }
+            ]
+        },
         "coverage": {
             "anyOf": [
                 {
