@@ -1,26 +1,30 @@
 {
-    "type": "object",
-    "properties": {
-        "project_id": {
-            "type": ["integer"]
-        },
-        "commit_id": {
-            "type": ["string"]
-        },
-        "filename": {
-            "type": ["string"]
-        },
-        "filepath": {
-            "type": ["string"]
-        },
-        "fileurl": {
-            "type": ["string"]
-        },
-        "content": {
-            "type": ["string"]
-        },
-        "ref": {
-            "type": ["null", "string"]
-        }
+  "type": "object",
+  "properties": {
+    "project_id": {
+      "type": ["integer"]
+    },
+    "commit_id": {
+      "type": ["string"]
+    },
+    "filename": {
+      "type": ["string"]
+    },
+    "filepath": {
+      "type": ["string"]
+    },
+    "fileurl": {
+      "type": ["string"]
+    },
+    "content": {
+      "type": ["string"]
+    },
+    "ref": {
+      "type": ["null", "string"]
+    },
+    "date": {
+      "type": "string",
+      "format": "date-time"
     }
+  }
 }

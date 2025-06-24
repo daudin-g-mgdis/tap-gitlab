@@ -214,6 +214,10 @@ RESOURCES = {
         'key_properties': ['project_id', 'commit_id', 'filename', 'filepath'],
         'replication_method': 'FULL_TABLE',
     },
+    'commit_details': {
+        'url': 'GET /projects/{id}/repository/commits/{commit_id}',
+        # no other config, its only here to register the commit url, we need commits to get the date
+    },
 }
 
 ULTIMATE_RESOURCES = ("epics", "epic_issues")
@@ -915,6 +919,15 @@ def sync_file(project, tag, filename, filepath, ref):
         # Just skip it and continue with the rest of the extraction
         return
 
+    # Récupère le commit associé pour avoir la date
+    commit_url = get_url(entity="commit_details", id=project['id'], commit_id=tag['commit_id'])
+    try:
+        commit_content = request(url).json()
+    except ResourceInaccessible as exc:
+        # Don't halt execution if a commit is Inaccessible
+        # Just skip it and continue with the rest of the extraction
+        return
+
     # Le temps d'extraction pour l'enregistrement des données
     time_extracted = utils.now()
     stream = CATALOG.get_stream(entity)
@@ -927,8 +940,9 @@ def sync_file(project, tag, filename, filepath, ref):
         "filename": filename,
         "filepath": filepath,
         "fileurl": url,
-        "content": file_content ,
-        "ref": ref
+        "content": file_content,
+        "ref": ref,
+        "date": commit_content["committed_date"]
     }
 
     if not stream.is_selected():
