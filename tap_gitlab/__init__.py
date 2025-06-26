@@ -215,7 +215,7 @@ RESOURCES = {
         'replication_method': 'FULL_TABLE',
     },
     'commit_details': {
-        'url': 'GET /projects/{id}/repository/commits/{commit_id}',
+        'url': '/projects/{id}/repository/commits/{commit_id}',
         # no other config, its only here to register the commit url, we need commits to get the date
         'schema': load_schema('commits'),
         'key_properties': [],
