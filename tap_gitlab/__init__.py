@@ -931,6 +931,11 @@ def sync_file(project, tag, filename, filepath, ref):
         # Just skip it and continue with the rest of the extraction
         return
 
+    # extract commit date, parse it as a date, and format it to a timestamp
+    commit_date_str = commit_content["committed_date"]
+    commit_date = parse_datetime(commit_date_str)
+    date = format_timestamp(commit_date, "string", { format: "date-time"} )
+
     # Le temps d'extraction pour l'enregistrement des données
     time_extracted = utils.now()
     stream = CATALOG.get_stream(entity)
@@ -945,7 +950,7 @@ def sync_file(project, tag, filename, filepath, ref):
         "fileurl": url,
         "content": file_content,
         "ref": ref,
-        "date": commit_content["committed_date"]
+        "date": date
     }
 
     if not stream.is_selected():
