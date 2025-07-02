@@ -121,6 +121,17 @@
                 }
             ]
         },
+        "queued_at": {
+            "anyOf": [
+                {
+                    "type": "string",
+                    "format": "date-time"
+                },
+                {
+                    "type": "null"
+                }
+            ]
+        },
         "artifacts_expire_at": {
             "anyOf": [
                 {
